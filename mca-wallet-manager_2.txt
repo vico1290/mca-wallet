@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCA Wallet Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0c10;
+    --surface: #14151c;
+    --border: #1f2030;
+    --accent: #00e5a0;
+    --red: #ff4d6d;
+    --gold: #ffd166;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --card: #13141b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 36px 20px; position: relative; z-index: 1; }
+
+  header { margin-bottom: 40px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-icon { width: 44px; height: 44px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  h1 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .tagline { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+  .connected-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); color: var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 11px; }
+  .badge-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden; }
+  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, var(--accent), transparent); }
+
+  .section-label { font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 18px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  .input-group { margin-bottom: 14px; }
+  .input-group:last-child { margin-bottom: 0; }
+
+  label { display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+
+  input, select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color .2s, box-shadow .2s; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,160,.08); }
+  input::placeholder { color: var(--muted); }
+  select option { background: var(--surface); }
+
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .type-btn { padding: 13px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; text-align: center; }
+  .type-btn .sub { font-size: 10px; opacity: .6; display: block; margin-top: 2px; font-weight: 400; font-family: 'DM Mono', monospace; }
+  .type-btn.debit.active { border-color: var(--red); background: rgba(255,77,109,.08); color: var(--red); }
+  .type-btn.credit.active { border-color: var(--accent); background: rgba(0,229,160,.08); color: var(--accent); }
+  .type-btn:hover { opacity: .85; }
+
+  .btn { padding: 13px 24px; border-radius: 10px; border: none; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; letter-spacing: .5px; }
+  .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 4px; }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-primary:active { transform: none; }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-sm { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 11px; padding: 6px 14px; }
+  .btn-sm:hover { color: var(--text); border-color: var(--text); }
+
+  .status { padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 12px; display: none; line-height: 1.5; }
+  .status.success { background: rgba(0,229,160,.08); border: 1px solid rgba(0,229,160,.25); color: var(--accent); display: block; }
+  .status.error { background: rgba(255,77,109,.08); border: 1px solid rgba(255,77,109,.25); color: var(--red); display: block; }
+  .status.loading { background: rgba(255,209,102,.08); border: 1px solid rgba(255,209,102,.25); color: var(--gold); display: block; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .stat-value.green { color: var(--accent); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.gold { color: var(--gold); }
+
+  .ledger-wrap { overflow-x: auto; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 10px; border-bottom: 1px solid rgba(31,32,48,.6); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.015); }
+  .td-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .td-credit { color: var(--accent); text-align: right; }
+  .td-debit { color: var(--red); text-align: right; }
+  .td-amount { text-align: right; }
+  .td-balance { text-align: right; font-weight: 500; }
+  .td-balance.neg { color: var(--red); }
+  .td-balance.pos { color: var(--accent); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; font-weight: 500; }
+  .pill-deposit { background: rgba(0,229,160,.1); color: var(--accent); }
+  .pill-syndication { background: rgba(255,209,102,.1); color: var(--gold); }
+  .pill-commission { background: rgba(139,92,246,.1); color: #a78bfa; }
+  .pill-other { background: rgba(90,90,114,.2); color: var(--muted); }
+
+  .empty { text-align: center; padding: 36px; color: var(--muted); font-size: 12px; }
+
+  .preview-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); display: none; }
+  .preview-box.visible { display: block; }
+  .preview-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .preview-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 500; }
+
+  .hint { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+  .hint a { color: var(--accent); }
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(0,0,0,.2); border-top-color: #000; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .card-header .section-label { margin-bottom: 0; }
+
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">💼</div>
+      <div>
+        <h1>MCA <span>Wallet</span></h1>
+        <div class="tagline">Eljay Capital · Ledger Manager</div>
+      </div>
+    </div>
+    <div id="connectedBadge" style="display:none">
+      <span class="connected-badge"><span class="badge-dot"></span> Connected</span>
+    </div>
+  </header>
+
+  <!-- SETUP -->
+  <div class="card" id="setupCard">
+    <div class="section-label">Connect Google Sheet</div>
+    <div class="grid-2">
+      <div class="input-group">
+        <label>Google Sheet ID</label>
+        <input type="text" id="sheetId" placeholder="Paste Sheet ID here..." />
+        <p class="hint">From URL: /spreadsheets/d/<strong style="color:var(--gold)">THIS_PART</strong>/edit</p>
+      </div>
+      <div class="input-group">
+        <label>Tab Name (exact)</label>
+        <input type="text" id="sheetName" placeholder="e.g. Victor Sheet" value="Sheet1" />
+        <p class="hint">The tab name at the bottom of your sheet</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="input-group">
+        <label>First Data Row #</label>
+        <input type="number" id="firstRow" value="7" min="1" />
+        <p class="hint">Row where transactions start (skip header rows)</p>
+      </div>
+      <div class="input-group">
+        <label>Balance Column</label>
+        <input type="text" id="balCol" value="G" maxlength="2" />
+        <p class="hint">Running balance column (G in your sheet)</p>
+      </div>
+      <div class="input-group">
+        <label>OAuth Client ID</label>
+        <input type="text" id="clientIdInput" placeholder="...googleusercontent.com" />
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="connectSheet()">Connect &amp; Load Sheet</button>
+    <div id="setupStatus" class="status"></div>
+    <p class="hint" style="margin-top:14px">
+      Need a Client ID? <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> →
+      Enable Sheets API → Credentials → OAuth 2.0 Web Client → add this page's URL to Authorized Origins.
+    </p>
+  </div>
+
+  <!-- STATS -->
+  <div id="statsSection" style="display:none">
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">Total Credits</div>
+        <div class="stat-value green" id="statCredits">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Debits</div>
+        <div class="stat-value red" id="statDebits">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Account Balance</div>
+        <div class="stat-value gold" id="statBalance">$0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD TRANSACTION -->
+  <div class="card" id="txCard" style="display:none">
+    <div class="section-label">New Transaction</div>
+
+    <div class="type-toggle">
+      <button class="type-btn credit active" id="btnCredit" onclick="setType('credit')">
+        ↙ Credit / Deposit
+        <span class="sub">money coming in</span>
+      </button>
+      <button class="type-btn debit" id="btnDebit" onclick="setType('debit')">
+        ↗ Debit / Syndication
+        <span class="sub">money going out</span>
+      </button>
+    </div>
+
+    <div class="grid-2">
+      <div class="input-group">
+        <label>Date</label>
+        <input type="date" id="txDate" />
+      </div>
+      <div class="input-group">
+        <label>Type</label>
+        <select id="txType">
+          <option value="Deposit">Deposit</option>
+          <option value="Syndication">Syndication</option>
+          <option value="Commission">Commission</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Description</label>
+      <input type="text" id="txDesc" placeholder="e.g. Syndication Deal - ABC Merchant" />
+    </div>
+
+    <div class="input-group">
+      <label>Amount ($)</label>
+      <input type="number" id="txAmount" placeholder="0.00" min="0" step="0.01" oninput="updatePreview()" />
+    </div>
+
+    <div class="preview-box" id="previewBox">
+      <div class="preview-row">
+        <span>Description</span><span id="prevDesc" style="color:var(--text)">—</span>
+      </div>
+      <div class="preview-row">
+        <span>Credit</span><span id="prevCredit" style="color:var(--accent)">—</span>
+      </div>
+      <div class="preview-row">
+        <span>Debit</span><span id="prevDebit" style="color:var(--red)">—</span>
+      </div>
+      <div class="preview-row">
+        <span>New Balance</span><span id="prevBalance">—</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitTx()">Add to Sheet</button>
+    <div id="txStatus" class="status"></div>
+  </div>
+
+  <!-- LEDGER -->
+  <div class="card" id="ledgerCard" style="display:none">
+    <div class="card-header">
+      <div class="section-label" style="margin:0">Recent Transactions</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" id="undoBtn" onclick="undoLast()" style="color:var(--red);border-color:var(--red);display:none">↩ Undo Last</button>
+        <button class="btn btn-sm" onclick="loadSheet()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="undoStatus" class="status"></div>
+    <div class="ledger-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th style="text-align:right">Credit</th>
+            <th style="text-align:right">Debit</th>
+            <th style="text-align:right">Amount</th>
+            <th style="text-align:right">Balance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody">
+          <tr><td colspan="7" class="empty">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let cfg = { sheetId:'', sheetName:'Sheet1', firstRow:7, balCol:'G', clientId:'' };
+let tokenClient, gapiInited=false, gisInited=false;
+let rows = [];
+let currentType = 'credit';
+let currentBalance = 0;
+let nextRow = 1;
+
+function gapiLoaded() {
+  gapi.load('client', async () => {
+    await gapi.client.init({ discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'] });
+    gapiInited = true;
+  });
+}
+
+function gisLoaded() { gisInited = true; }
+
+function initTokenClient(clientId) {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: async (resp) => {
+      if (resp.error) { showStatus('setupStatus','error','✗ Auth failed: '+resp.error); return; }
+      gapi.client.setToken({ access_token: resp.access_token });
+      showStatus('setupStatus','success','✓ Signed in! Loading sheet...');
+      await loadSheet();
+    }
+  });
+}
+
+function connectSheet() {
+  cfg.sheetId   = document.getElementById('sheetId').value.trim();
+  cfg.sheetName = document.getElementById('sheetName').value.trim() || 'Sheet1';
+  cfg.firstRow  = parseInt(document.getElementById('firstRow').value) || 7;
+  cfg.balCol    = document.getElementById('balCol').value.trim().toUpperCase() || 'G';
+  cfg.clientId  = document.getElementById('clientIdInput').value.trim();
+
+  if (!cfg.sheetId)  { showStatus('setupStatus','error','✗ Paste your Sheet ID'); return; }
+  if (!cfg.clientId) { showStatus('setupStatus','error','✗ Enter your OAuth Client ID'); return; }
+  if (!gapiInited)   { showStatus('setupStatus','error','✗ Google API still loading — wait a moment'); return; }
+
+  localStorage.setItem('mca_cfg', JSON.stringify(cfg));
+  initTokenClient(cfg.clientId);
+  showStatus('setupStatus','loading','⏳ Opening Google sign-in...');
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function loadSheet() {
+  try {
+    const lastRow = cfg.firstRow + 500;
+    const range = `${cfg.sheetName}!A${cfg.firstRow}:G${lastRow}`;
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: cfg.sheetId, range
+    });
+    const vals = res.result.values || [];
+    rows = vals.filter(r => r && r[0]);
+
+    renderLedger();
+    updateStats();
+    calcNextRowAndBalance();
+
+    document.getElementById('statsSection').style.display = 'block';
+    document.getElementById('txCard').style.display = 'block';
+    document.getElementById('ledgerCard').style.display = 'block';
+    document.getElementById('connectedBadge').style.display = 'block';
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('txDate').value = today;
+    updatePreview();
+  } catch(e) {
+    console.error(e);
+    showStatus('setupStatus','error','✗ '+(e.result?.error?.message || e.message || 'Check Sheet ID & permissions'));
+  }
+}
+
+function calcNextRowAndBalance() {
+  nextRow = cfg.firstRow + rows.length;
+  if (rows.length > 0) {
+    const last = rows[rows.length-1];
+    const raw = last[6] ? String(last[6]).replace(/[$,\s]/g,'') : '0';
+    currentBalance = parseFloat(raw) || 0;
+  } else {
+    currentBalance = 0;
+  }
+}
+
+function renderLedger() {
+  const tbody = document.getElementById('ledgerBody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No transactions found</td></tr>'; return; }
+  // Build display with actual sheet row numbers
+  const indexed = rows.map((r, i) => ({ r, sheetRow: cfg.firstRow + i }));
+  const display = [...indexed].reverse().slice(0, 25);
+  tbody.innerHTML = display.map(({r, sheetRow}) => {
+    const date  = r[0]||'';
+    const type  = r[1]||'';
+    const desc  = r[2]||'';
+    const cred  = r[3] ? parseFloat(String(r[3]).replace(/[$,]/g,'')) : null;
+    const deb   = r[4] ? parseFloat(String(r[4]).replace(/[$,]/g,'')) : null;
+    const amt   = r[5] ? parseFloat(String(r[5]).replace(/[$,]/g,'')) : null;
+    const bal   = r[6] ? parseFloat(String(r[6]).replace(/[$,]/g,'')) : null;
+    const tl = type.toLowerCase();
+    const pill = tl.includes('deposit') ? 'pill-deposit' : tl.includes('commission') ? 'pill-commission' : tl.includes('syndication') ? 'pill-syndication' : 'pill-other';
+    const fmt = n => '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2});
+    return `<tr id="row-${sheetRow}">
+      <td class="td-date">${date}</td>
+      <td><span class="pill ${pill}">${type}</span></td>
+      <td>${desc}</td>
+      <td class="td-credit">${cred!=null?fmt(cred):''}</td>
+      <td class="td-debit">${deb!=null?fmt(deb):''}</td>
+      <td class="td-amount">${amt!=null?fmt(amt):''}</td>
+      <td class="td-balance ${bal!=null&&bal<0?'neg':'pos'}">${bal!=null?(bal<0?'-':'')+fmt(bal):''}</td>
+      <td><button onclick="deleteRow(${sheetRow}, '${desc.replace(/'/g,"\\'")}', this)" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-family:Syne,sans-serif;">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  let tc=0, td=0;
+  rows.forEach(r => {
+    if (r[3]) tc += parseFloat(String(r[3]).replace(/[$,]/g,''))||0;
+    if (r[4]) td += parseFloat(String(r[4]).replace(/[$,]/g,''))||0;
+  });
+  const bal = tc - td;
+  document.getElementById('statCredits').textContent = '$'+tc.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('statDebits').textContent  = '$'+td.toLocaleString('en-US',{minimumFractionDigits:2});
+  const el = document.getElementById('statBalance');
+  el.textContent = (bal<0?'-':'')+'$'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:2});
+  el.className = 'stat-value '+(bal<0?'red':'green');
+}
+
+function setType(type) {
+  currentType = type;
+  document.getElementById('btnCredit').classList.toggle('active', type==='credit');
+  document.getElementById('btnDebit').classList.toggle('active',  type==='debit');
+  document.getElementById('txType').value = type==='credit' ? 'Deposit' : 'Syndication';
+  updatePreview();
+}
+
+function updatePreview() {
+  const amt  = parseFloat(document.getElementById('txAmount').value)||0;
+  const desc = document.getElementById('txDesc').value||'—';
+  const box  = document.getElementById('previewBox');
+  if (!amt) { box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  const newBal = currentType==='credit' ? currentBalance+amt : currentBalance-amt;
+  const fmt = n => '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('prevDesc').textContent   = desc;
+  document.getElementById('prevCredit').textContent = currentType==='credit' ? fmt(amt) : '—';
+  document.getElementById('prevDebit').textContent  = currentType==='debit'  ? fmt(amt) : '—';
+  const pb = document.getElementById('prevBalance');
+  pb.textContent = (newBal<0?'-':'')+fmt(newBal);
+  pb.style.color = newBal<0 ? 'var(--red)' : 'var(--gold)';
+}
+
+async function submitTx() {
+  const date = document.getElementById('txDate').value;
+  const type = document.getElementById('txType').value;
+  const desc = document.getElementById('txDesc').value.trim();
+  const amt  = parseFloat(document.getElementById('txAmount').value);
+
+  if (!date)        { showStatus('txStatus','error','✗ Pick a date'); return; }
+  if (!desc)        { showStatus('txStatus','error','✗ Enter a description'); return; }
+  if (!amt||amt<=0) { showStatus('txStatus','error','✗ Enter a valid amount'); return; }
+
+  const [y,m,d] = date.split('-');
+  const fmtDate = `${m}/${d}/${y}`;
+  const credit  = currentType==='credit' ? amt : '';
+  const debit   = currentType==='debit'  ? amt : '';
+  const newBal  = currentType==='credit' ? currentBalance+amt : currentBalance-amt;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Writing to sheet...';
+
+  try {
+    const range = `${cfg.sheetName}!A${nextRow}:G${nextRow}`;
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: cfg.sheetId,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[fmtDate, type, desc, credit, debit, amt, newBal]] }
+    });
+
+    // Update summary cells: G1=Last Update, G2=Total Credits, G3=Total Debits, G4=Account Balance
+    const today = new Date();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    const yyyy = today.getFullYear();
+    const todayStr = `${mm}/${dd}/${yyyy}`;
+
+    // Calculate new totals including this transaction
+    let tc = 0, td = 0;
+    rows.forEach(r => {
+      if (r[3]) tc += parseFloat(String(r[3]).replace(/[$,]/g,''))||0;
+      if (r[4]) td += parseFloat(String(r[4]).replace(/[$,]/g,''))||0;
+    });
+    if (currentType==='credit') tc += amt;
+    else td += amt;
+    const totalBal = tc - td;
+
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: cfg.sheetId,
+      resource: {
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: `${cfg.sheetName}!G1`, values: [[todayStr]] },
+          { range: `${cfg.sheetName}!G2`, values: [[tc]] },
+          { range: `${cfg.sheetName}!G3`, values: [[td]] },
+          { range: `${cfg.sheetName}!G4`, values: [[totalBal]] }
+        ]
+      }
+    });
+
+    const fmt = n => (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2});
+    showStatus('txStatus','success',`✓ Row ${nextRow} added! Balance: ${fmt(newBal)} · Summary updated ✓`);
+
+    // Show undo button
+    document.getElementById('undoBtn').style.display = 'inline-flex';
+    document.getElementById('undoStatus').className = 'status';
+
+    document.getElementById('txDesc').value   = '';
+    document.getElementById('txAmount').value = '';
+    document.getElementById('previewBox').classList.remove('visible');
+
+    await loadSheet();
+  } catch(e) {
+    console.error(e);
+    showStatus('txStatus','error','✗ '+(e.result?.error?.message||e.message));
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Add to Sheet';
+}
+
+async function deleteRow(sheetRow, desc, btnEl) {
+  if (!confirm(`Delete this transaction?\n"${desc}"\n\nThis will clear the row and recalculate totals.`)) return;
+
+  btnEl.disabled = true;
+  btnEl.textContent = '...';
+
+  try {
+    // Clear the row
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: cfg.sheetId,
+      range: `${cfg.sheetName}!A${sheetRow}:G${sheetRow}`
+    });
+
+    // Reload and recalculate totals
+    await loadSheet();
+
+    // Recalculate summary from fresh rows
+    let tc = 0, td = 0;
+    rows.forEach(r => {
+      if (r[3]) tc += parseFloat(String(r[3]).replace(/[$,]/g,''))||0;
+      if (r[4]) td += parseFloat(String(r[4]).replace(/[$,]/g,''))||0;
+    });
+    const totalBal = tc - td;
+    const today = new Date();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    const yyyy = today.getFullYear();
+
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: cfg.sheetId,
+      resource: {
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: `${cfg.sheetName}!G1`, values: [[`${mm}/${dd}/${yyyy}`]] },
+          { range: `${cfg.sheetName}!G2`, values: [[tc]] },
+          { range: `${cfg.sheetName}!G3`, values: [[td]] },
+          { range: `${cfg.sheetName}!G4`, values: [[totalBal]] }
+        ]
+      }
+    });
+
+    showStatus('undoStatus','success',`✓ Deleted "${desc}" · Summary updated`);
+
+  } catch(e) {
+    console.error(e);
+    showStatus('undoStatus','error','✗ '+(e.result?.error?.message||e.message));
+    btnEl.disabled = false;
+    btnEl.textContent = '🗑';
+  }
+}
+
+async function undoLast() {
+  if (!rows.length) { showStatus('undoStatus','error','✗ Nothing to undo'); return; }
+
+  const lastRow = rows[rows.length - 1];
+  const lastRowNum = cfg.firstRow + rows.length - 1;
+
+  const btn = document.getElementById('undoBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Undoing...';
+
+  try {
+    // Clear the last row by emptying all cells
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: cfg.sheetId,
+      range: `${cfg.sheetName}!A${lastRowNum}:G${lastRowNum}`
+    });
+
+    // Recalculate totals without the last row
+    let tc = 0, td = 0;
+    rows.slice(0, -1).forEach(r => {
+      if (r[3]) tc += parseFloat(String(r[3]).replace(/[$,]/g,''))||0;
+      if (r[4]) td += parseFloat(String(r[4]).replace(/[$,]/g,''))||0;
+    });
+    const totalBal = tc - td;
+
+    // Update summary cells
+    const today = new Date();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    const yyyy = today.getFullYear();
+
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: cfg.sheetId,
+      resource: {
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: `${cfg.sheetName}!G1`, values: [[`${mm}/${dd}/${yyyy}`]] },
+          { range: `${cfg.sheetName}!G2`, values: [[tc]] },
+          { range: `${cfg.sheetName}!G3`, values: [[td]] },
+          { range: `${cfg.sheetName}!G4`, values: [[totalBal]] }
+        ]
+      }
+    });
+
+    showStatus('undoStatus','success',`✓ Undone! Removed: "${lastRow[2]}" · Row ${lastRowNum} cleared`);
+    document.getElementById('undoBtn').style.display = 'none';
+    await loadSheet();
+
+  } catch(e) {
+    console.error(e);
+    showStatus('undoStatus','error','✗ '+(e.result?.error?.message||e.message));
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '↩ Undo Last';
+}
+
+function showStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status '+type;
+  el.textContent = msg;
+}
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('mca_cfg');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.sheetId)   document.getElementById('sheetId').value       = s.sheetId;
+      if (s.sheetName) document.getElementById('sheetName').value     = s.sheetName;
+      if (s.firstRow)  document.getElementById('firstRow').value      = s.firstRow;
+      if (s.balCol)    document.getElementById('balCol').value        = s.balCol;
+      if (s.clientId)  document.getElementById('clientIdInput').value = s.clientId;
+    } catch(e) {}
+  }
+});
+</script>
+
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
